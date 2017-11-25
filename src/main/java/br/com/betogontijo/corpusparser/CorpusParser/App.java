@@ -10,62 +10,56 @@ import java.util.zip.GZIPInputStream;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 /**
  * Hello world!
  *
  */
 public class App {
-	private final static String DOINIT = "<doc>";
-	private final static String DOCEND = "</doc>";
-	private final static String DOCHEADINIT = "<dochdr>";
-	private final static String DOCHEADEND = "</dochdr>";
-	private final static String DOCNAMEINIT = "<docno>";
-	private final static String DOCNAMEEND = "</docno>";
-	private final static String DOCIDINIT = "<docoldno>";
-	private final static String DOCIDEND = "</docoldno>";
-	// private final static String DOCURIINIT = "<uri>";
-	// private final static String DOCURIEND = "</uri>";
 
 	public static void main(String[] args) throws FileNotFoundException, IOException {
-		String corpusPath = "E:/WT10G/corpus/";
-		String outputHtmls = "E:/WT10G/pages/";
+		String corpusPath = "F:" + File.separator + "WT10G" + File.separator + "corpus" + File.separator;
+		String outputHtmls = "F:" + File.separator + "WT10G" + File.separator + "pages" + File.separator;
 
 		File file = new File(corpusPath);
 
 		for (String wtx : file.list()) {
 			String wtxPath = corpusPath + wtx;
-			for (String gzFile : new File(wtxPath).list()) {
-				GZIPInputStream inputStream = new GZIPInputStream(new FileInputStream(wtxPath + "/" + gzFile));
+			File file3 = new File(wtxPath);
+			if (file3.isDirectory()) {
+				for (String gzFile : file3.list()) {
+					GZIPInputStream inputStream = new GZIPInputStream(
+							new FileInputStream(wtxPath + File.separator + gzFile));
 
-				Document doc = Jsoup.parse(inputStream, null, gzFile);
+					Document doc = Jsoup.parse(inputStream, null, gzFile);
 
-				for (Element element : doc.select("doc")) {
-					String text = element.toString().replace(DOINIT, "<html>").replace(DOCEND, "</html>")
-							.replace(DOCHEADINIT, "<head>").replace(DOCHEADEND, "</head>");
-					int docNameInit = text.indexOf(DOCNAMEINIT);
-					int docIdName = text.indexOf(DOCIDEND);
-					String nameAndId = text.substring(docNameInit + DOCNAMEINIT.length() + 2, docIdName)
-							.replace(DOCNAMEEND, "").replace(DOCIDINIT, "").replaceAll("\n", "")
-							.replaceAll("\\s{2,}", " ").trim();
-					// String select = element.select("dochdr").toString();
-					// int uriStart = select.indexOf("http");
-					// int uriEnd = select.indexOf(" ", uriStart);
-					// String uri = select.substring(uriStart, uriEnd);
-					// text = text.substring(0, docNameInit) + DOCURIINIT + "\n"
-					// + uri + "\n" + DOCURIEND + "\n"
-					// + text.substring(docIdName + DOCIDEND.length() + 2,
-					// text.length());
-
-					text = text.substring(0, docNameInit)
-							+ text.substring(docIdName + DOCIDEND.length() + 2, text.length());
-					FileOutputStream fileOutputStream = new FileOutputStream(outputHtmls + nameAndId + ".html");
-					fileOutputStream.write(text.getBytes());
-					fileOutputStream.flush();
-					fileOutputStream.close();
+					for (Element element : doc.select("doc")) {
+						element.tagName("html");
+						element.select("doc").remove();
+						element.select("docoldno").remove();
+						element.select("dochdr").tagName("head");
+						// element.appendElement("uri").html(element.select("head").text().split("
+						// ")[0]);
+						Elements all = element.children().not("head").not("title").not("uri").not("body").not("docno");
+						if (element.select("body").size() == 0) {
+							element.appendElement("body").html(all.toString());
+						} else {
+							element.select("body").html(all.toString());
+						}
+						all.remove();
+						String text = element.toString();
+						String[] split = element.select("docno").text().split("-");
+						File file2 = new File(outputHtmls + File.separator + split[0] + File.separator + split[1]);
+						file2.mkdirs();
+						FileOutputStream fileOutputStream = new FileOutputStream(
+								file2.getPath() + File.separator + split[2] + ".html");
+						fileOutputStream.write(text.getBytes());
+						fileOutputStream.flush();
+						fileOutputStream.close();
+					}
 				}
 			}
-
 		}
 
 	}
